@@ -54,7 +54,10 @@ def reorder_df(df):
     return df[cols]
 
 
-def nan_df(df, thr):
+def cons_nan_df(df, thr):
+    """
+    Consecutive NaN values
+    """
     alert_level = 0
     c_message = 'OK'
     nan_values = df[df.columns[0]].notnull().astype(int)
@@ -64,7 +67,7 @@ def nan_df(df, thr):
     consecutive_nans = np.max(nan_count.values)
     if consecutive_nans > thr:
         alert_level = 2
-        c_message = 'Many consecutive Nans'
+        c_message = 'Many consecutive NaNs'
     return c_message, alert_level, consecutive_nans
 
 
@@ -100,22 +103,23 @@ def processing_dir(dir_path):
         c_message, alert_level, pct_nan = check_nan(df, 0.4)
         alist.append(alert_level)
         clist.append(c_message)
-
         alert = np.max(alist)
         if alert != 3:
             freq = cu.infer_freq(df)
-            c_message, alert_level, gaps_list, ngaps = cu.check_gaps(df, freq)
+
+            c_message, alert_level, consecutive_nans = cons_nan_df(df, 1000)
             alist.append(alert_level)
             clist.append(c_message)
+            logger.info('Consecutive NaN values:{} for {}'.
+                        format(consecutive_nans, element))
 
             c_message, alert_level, ts_fill_rate = cu.check_fill_rate(df, freq)
             alist.append(alert_level)
             clist.append(c_message)
-
-            c_message, alert_level, consecutive_nans = nan_df(df, 10)
+ 
+            c_message, alert_level, gaps_list, ngaps = cu.check_gaps(df, freq)
             alist.append(alert_level)
             clist.append(c_message)
-            logger.info('Consecutive NaN values:{} for {}'.format(consecutive_nans, element))
 
         alert_level = np.max(alist)
         # control message
@@ -158,6 +162,8 @@ def main(path):
             #===================================================================
     df.to_csv('Files_to_check.csv')
 
-
 path = '18 06 Derived'
+#===============================================================================
+# main('test')
+#===============================================================================
 main(path)

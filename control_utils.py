@@ -271,6 +271,28 @@ def check_mccv(df, max_ccv):
     return c_message, alert_level
 
 
+def infer_freq(df):
+    """
+    Function inferring the frequency of a TS if not provided
+    :param df: Input DataFrame (type: pandas DataFrame)
+    :return:
+        - freq : inferred frequency (type: character or timedelta)
+    """
+    freq = ''
+    if 'Unnamed: 0' in list(df):  # Case for derived data ?
+        df.set_index('Unnamed: 0', inplace=True)
+        df.index.names = ['Date']
+    df.index = pd.DatetimeIndex(df.index)
+    # Sorting the dataframe in ascending order
+    # df.sort(ascending=True, inplace=True)
+    # Computing the gap distribution
+    res = (pd.Series(df.index[1:]) - pd.Series(df.index[:-1])).value_counts()
+    # print res
+    if res.size != 0:
+        freq = res.index[0]
+    return freq
+
+
 def check_fill_rate(df, freq):
     """
     Function computing the fill_rate of a DF from its first provided date
@@ -393,3 +415,4 @@ def write_list_to_csv(flist, fname):
         fname = fname.replace(sep, ' ')
         # Saving the DataFrame in a csv file
         df.to_csv(fname, sep=',')
+
