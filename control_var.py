@@ -1,5 +1,5 @@
 # coding: utf-8
-#PydevCodeAnalysisIgnore
+# PydevCodeAnalysisIgnore
 # Librairies
 import pandas as pd
 from os.path import join
@@ -31,7 +31,7 @@ def filter_dir(path, denied_dir, flist):
             dst = join(denied_dir, f)
             if element == f:
                 shutil.move(src, dst)
-    print '[INFO] DONE FILTERING DIRECTORY: {}'.format(path)
+    logger.info('DONE FILTERING DIRECTORY: {}'.format(path))
 
 
 def check_nan(df, pct):
@@ -48,9 +48,24 @@ def check_nan(df, pct):
 
 def reorder_df(df):
     cols = ['current_directory', 'var_name', 'alert',
-            'nrows', 'ncols', 'is_empty', 'pct_nan',
-            'ts_fill_rate', 'ngaps']
+            'nrows', 'ncols', 'is_empty', 'freq',
+            'pct_nan',
+            'ts_fill_rate', 'consecutive_nans']
     return df[cols]
+
+
+def nan_df(df, thr):
+    alert_level = 0
+    c_message = 'OK'
+    nan_values = df[df.columns[0]].notnull().astype(int)
+    nan_values = nan_values.cumsum()
+    nan_count = df[df.columns[0]].isnull().astype(int)
+    nan_count = nan_count.groupby(nan_values).sum()
+    consecutive_nans = np.max(nan_count.values)
+    if consecutive_nans > thr:
+        alert_level = 2
+        c_message = 'Many consecutive Nans'
+    return c_message, alert_level, consecutive_nans
 
 
 def processing_dir(dir_path):
@@ -64,7 +79,8 @@ def processing_dir(dir_path):
     nrows = ''
     is_empty = False
     alert_level = ''
-
+    consecutive_nans = ''
+    freq = ''
     for element in os.listdir(dir_path):
         csv_path = join(dir_path, element)
         df = pd.read_csv(csv_path, index_col=0, parse_dates=True)
@@ -85,28 +101,37 @@ def processing_dir(dir_path):
         alist.append(alert_level)
         clist.append(c_message)
 
+        alert = np.max(alist)
+        if alert != 3:
+            freq = cu.infer_freq(df)
+            c_message, alert_level, gaps_list, ngaps = cu.check_gaps(df, freq)
+            alist.append(alert_level)
+            clist.append(c_message)
+
+            c_message, alert_level, ts_fill_rate = cu.check_fill_rate(df, freq)
+            alist.append(alert_level)
+            clist.append(c_message)
+
+            c_message, alert_level, consecutive_nans = nan_df(df, 10)
+            alist.append(alert_level)
+            clist.append(c_message)
+            logger.info('Consecutive NaN values:{} for {}'.format(consecutive_nans, element))
+
         alert_level = np.max(alist)
-        if alert_level < 3:
-            c_message, alert_level, gaps_list, ngaps = cu.check_gaps(df, 'B')
-            alist.append(alert_level)
-            clist.append(c_message)
-
-            c_message, alert_level, ts_fill_rate = cu.check_fill_rate(df, 'B')
-            alist.append(alert_level)
-            clist.append(c_message)
-
         # control message
         if alert_level > 0:
             c_message = ', '.join([clist[i] for i, j in enumerate(clist) if j != 'OK'])
+
         var_dict = {'current_directory': basename(dir_path),
                     'var_name': element,
                     'nrows': nrows,
                     'ncols': ncols,
+                    'freq': freq,
                     'is_empty': is_empty,
                     'pct_nan': pct_nan,
                     'ts_fill_rate': ts_fill_rate,
                     'alert': alert_level,
-                    'ngaps': ngaps
+                    'consecutive_nans': consecutive_nans
                     }
         if alert_level != 0:
             # list_denied.append(element)
@@ -120,12 +145,19 @@ def processing_dir(dir_path):
 def main(path):
     df = pd.DataFrame()
     for pdir in os.listdir(path):
+        logger.info('Processing directory: {}'.format(pdir))
         c_dir = os.path.join(path, pdir)
         if os.path.isdir(c_dir):
-            dfi = processing_dir(c_dir)
-            df = df.append(dfi)
+            if os.listdir(c_dir) != []:
+                dfi = processing_dir(c_dir)
+                df = df.append(dfi)
+            #===================================================================
+            # else:
+            #     logger.error('Cannot process Empty Directory: {}'.format(pdir))
+            #     df = pd.DataFrame()
+            #===================================================================
     df.to_csv('Files_to_check.csv')
 
 
-path = '18 06 Derived Lab'
+path = '18 06 Derived'
 main(path)
