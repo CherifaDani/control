@@ -61,9 +61,12 @@ def cons_nan_df(df, thr):
     """
     alert_level = 0
     c_message = 'OK'
-    nan_values = df[df.columns[0]].notnull().astype(int)
+    df2 = df.dropna()
+    tdate = df2.index[0]
+    dfx = df[df.index > tdate]
+    nan_values = dfx[dfx.columns[0]].notnull().astype(int)
     nan_values = nan_values.cumsum()
-    nan_count = df[df.columns[0]].isnull().astype(int)
+    nan_count = dfx[dfx.columns[0]].isnull().astype(int)
     nan_count = nan_count.groupby(nan_values).sum()
     consecutive_nans = np.max(nan_count.values)
     if consecutive_nans > thr:
@@ -74,22 +77,22 @@ def cons_nan_df(df, thr):
 
 def processing_dir(dir_path):
     # list_accepted = []
-    alist = []
-    clist = []
     list_dict = []
-    pct_nan = 0.0
-    ts_fill_rate = ''
     element = ''
-    nrows = ''
-    is_empty = False
-    alert_level = 0
-    consecutive_nans = ''
-    freq = ''
-    long_rep = ''
-    long_elem = ''
-    c_message = ''
-
     for element in os.listdir(dir_path):
+        alist = []
+        clist = []
+        alert_level = 0
+        nrows = ''
+        is_empty = False
+        consecutive_nans = ''
+        freq = ''
+        long_rep = ''
+        long_elem = ''
+        c_message = ''
+        pct_nan = 0.0
+        ts_fill_rate = ''
+
         csv_path = join(dir_path, element)
         df = pd.read_csv(csv_path, index_col=0, parse_dates=True)
 
@@ -111,7 +114,7 @@ def processing_dir(dir_path):
             clist.append(c_message)
             logger.info('Consecutive NaN values:{} for {}'.
                         format(consecutive_nans, element))
-        # Removing rows from a DataFrame which all values are NaN's 
+        # Removing rows from a DataFrame which all values are NaN's
         df = cu.clean_rows_df(df)
         c_message, alert_level, nrows = cu.check_nrows(df)
         alist.append(alert_level)
@@ -136,10 +139,6 @@ def processing_dir(dir_path):
             clist.append(c_message)
         alert_level = np.max(alist)
 
-        # control message
-        if alert_level > 0:
-            c_message = ', '.join([clist[i] for i, j in enumerate(clist) if j != 'OK'])
-
         var_dict = {'current_directory': basename(dir_path),
                     'var_name': element,
                     'nrows': nrows,
@@ -155,13 +154,17 @@ def processing_dir(dir_path):
                     'c_message': c_message
                     }
         print var_dict['alert']
+        # control message
+        if alert_level > 0:
+            c_message = ', '.join([clist[i] for i, j in enumerate(clist) if j != 'OK'])
+
         #if alert_level != 0:
             # list_denied.append(element)
             # data_utils.write_dict_to_csv('Y.csv', var_dict, 'a')
         list_dict.append(var_dict)
-    dfj = pd.DataFrame.from_dict(list_dict)
-    dfj = reorder_df(dfj)
-    return dfj
+    dff = pd.DataFrame.from_dict(list_dict)
+    dff = reorder_df(dff)
+    return dff
 
 
 def main(path):
@@ -174,15 +177,11 @@ def main(path):
             if os.listdir(c_dir) != []:
                 dfi = processing_dir(c_dir)
                 df = df.append(dfi)
-            #===================================================================
-            # else:
-            #     logger.error('Cannot process Empty Directory: {}'.format(pdir))
-            #     df = pd.DataFrame()
-            #===================================================================
-        df.to_csv('Fs_18_06.csv')
+
+        df.to_csv('Dict_files.csv')
 
 path = '18 06 Derived'
-main('test')
+#main('test')
 #===============================================================================
-# main(path)
+main(path)
 #===============================================================================

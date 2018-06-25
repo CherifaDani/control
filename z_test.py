@@ -3,14 +3,11 @@ import numpy as np
 import data_utils
 import pandas as pd
 from dateutil import parser
-
-
+#import control_var as cv
+from matplotlib import pyplot
+import control_utils
 # Librairies
-import pandas as pd
-import numpy as np
-from os.path import sep
-from dateutil import parser
-from pandas.core.groupby import DataError
+
 import logging
 from var_logger import setup_logging
 
@@ -20,11 +17,12 @@ logger.debug('Logger for class ')
 logger.setLevel('DEBUG')
 
 
-def check_gaps(df, freq):
+# print df
+# df.plot()
+# pyplot.show()
+def check_fill_rate(df, freq):
     """
-    Function checking if there are any gaps in a DF,
-    according to its frequency
-
+    Function computing the fill_rate of a DF from its first provided date
 
     Parameters
     ----------
@@ -32,7 +30,7 @@ def check_gaps(df, freq):
           Input dataframe
 
     freq : {Char type}
-            The frequency of the DF
+              The frequency of the TS, default: 'B'
 
     Return
     ------
@@ -41,43 +39,34 @@ def check_gaps(df, freq):
 
     alert_level : {Int type}
                     The alert level of each case
-    gaps_list : {List type}
-                The list of gaps' dates
 
-    n_gaps : {Int type}
-            The number of detected gaps
+    ts_fill_rate : {Float type}
+                    The fill rate of the time series
     """
+    if freq == pd.Timedelta('1 days'):
+        freq = 'B'
+
     c_message = 'OK'
     alert_level = 0
-    gaps_list = []
-    n_gaps = 0
+    ts_init = df.index[-1]
+    # Retrieving the first Timestamp date
+    ts_date = df.index[0]
+    # Computing the range (in working days), between the two dates
+    ts_range = pd.bdate_range(ts_date, ts_init, freq=freq)
+    # Evaluating the fill rate
+    ts_fill_rate = 1.0 * df.shape[0] / len(ts_range)
+    if ts_fill_rate <= 0.9:
+        print "[INFO] Fill rate = {}".format(ts_fill_rate)
+        c_message = 'low fill rate <= {} % !'.format(ts_fill_rate)
+        alert_level = 1
+    return c_message, alert_level, ts_fill_rate
 
-    if freq:
-        # print "[INFO] Original TS frequency : {}".format(freq)
-        # Viewing the DataFrame as the full freq to make NaNs appear
-        try:
-            dff = df.resample(freq)
-        except DataError:
-            logger.exception('Impossible to resample the TS !..')
-        else:
-            # Filtering the DataFrame to only keep week days
-            dff = dff[dff.index.dayofweek < 5]
-            # Filtering again to only keep dates with NaNs
-            dff = dff[dff.isnull().any(axis=1)]
-
-            n_gaps = len(dff.index)
-
-            if n_gaps > 0:
-                logger.debug('Found {} missing values !..'.format(n_gaps))
-                c_message = 'Gap(s) detected'
-                alert_level = 3
-                date_fmt = "%Y-%m-%d"
-                dff.index = dff.index.format(formatter=lambda x: parser.
-                                             parse(str(x)).strftime(date_fmt))
-                gaps_list = dff.index.values
-
-    return c_message, alert_level, gaps_list, n_gaps
-
-
-df = data_utils.load_var('GOV.csv', 'GOV_JPN_1Y_Z250D')
-c_message, alert_level, gaps_list, n_gaps = check_gaps(df, 'B')
+df = data_utils.load_var('ESTX600_FIN_EBIT1Y_RATIO_STD20_VS_STD100.csv', 'GOV_JPN_1Y_Z250D')
+print check_fill_rate(df, 'B')
+ts_init = df.index[-1]
+# Retrieving the first Timestamp date
+ts_date = df.index[0]
+# Computing the range (in working days), between the two dates
+ts_range = pd.bdate_range(ts_date, ts_init, freq='B')
+print ts_range
+print len(df)

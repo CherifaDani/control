@@ -303,7 +303,7 @@ def check_fill_rate(df, freq):
           Input dataframe
 
     freq : {Char type}
-              The frequency of the TS, eg: 'B', 'D'
+              The frequency of the TS, default: 'B'
 
     Return
     ------
@@ -312,24 +312,36 @@ def check_fill_rate(df, freq):
 
     alert_level : {Int type}
                     The alert level of each case
-    
-    ts_fill_rate: {Float type}
+
+    ts_fill_rate : {Float type}
                     The fill rate of the time series
     """
+    if freq == pd.Timedelta('1 days'):
+        freq = 'B'
+
     c_message = 'OK'
     alert_level = 0
-    # Getting the current Timestamp
-    ts_now = pd.tslib.Timestamp.now()
+    df = df.dropna()
+    ts_init = df.index[-1]
     # Retrieving the first Timestamp date
     ts_date = df.index[0]
     # Computing the range (in working days), between the two dates
-    ts_range = pd.bdate_range(ts_date, ts_now, freq=freq)
+    ts_range = pd.bdate_range(ts_date, ts_init, freq=freq)
     # Evaluating the fill rate
     ts_fill_rate = 1.0 * df.shape[0] / len(ts_range)
     if ts_fill_rate <= 0.9:
-        print "[INFO] Fill rate = {}".format(ts_fill_rate)
+        logger.info('Fill rate = {}'.format(ts_fill_rate))
         c_message = 'low fill rate <= {} % !'.format(ts_fill_rate)
         alert_level = 1
+    if ts_fill_rate > 1.0:
+        freq = 'D'
+        # Retrieving the first Timestamp date
+        ts_date = df.index[0]
+        # Computing the range (in working days), between the two dates
+        ts_range = pd.bdate_range(ts_date, ts_init, freq=freq)
+        # Evaluating the fill rate
+        ts_fill_rate = 1.0 * df.shape[0] / len(ts_range)
+
     return c_message, alert_level, ts_fill_rate
 
 
