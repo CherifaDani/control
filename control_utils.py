@@ -268,7 +268,7 @@ def check_mccv(df, max_ccv):
             c_message = 'max ccv overflow'
             alert_level = 2
         i += 1
-    return c_message, alert_level
+    return c_message, alert_level, long_rep, long_elem
 
 
 def infer_freq(df):
@@ -390,6 +390,17 @@ def check_gaps(df, freq):
                 gaps_list = dff.index.values
 
     return c_message, alert_level, gaps_list, n_gaps
+
+
+def clean_rows_df(df):
+    """
+    Function removing rows from a DataFrame which all values are NaN's
+    :param df: Input DataFrame (type: pandas DataFrame)
+    :return:
+        - dff : filtered DataFrame (type: pandas DataFrame)
+    """
+    dff = df.dropna(how='any', axis=0)
+    return dff
 
 
 def write_list_to_csv(flist, fname):

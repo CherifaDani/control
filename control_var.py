@@ -50,7 +50,8 @@ def reorder_df(df):
     cols = ['current_directory', 'var_name', 'alert',
             'nrows', 'ncols', 'is_empty', 'freq',
             'pct_nan',
-            'ts_fill_rate', 'consecutive_nans']
+            'ts_fill_rate', 'consecutive_nans',
+            'longest_element', 'longest_repeat', 'c_message']
     return df[cols]
 
 
@@ -81,9 +82,13 @@ def processing_dir(dir_path):
     element = ''
     nrows = ''
     is_empty = False
-    alert_level = ''
+    alert_level = 0
     consecutive_nans = ''
     freq = ''
+    long_rep = ''
+    long_elem = ''
+    c_message = ''
+
     for element in os.listdir(dir_path):
         csv_path = join(dir_path, element)
         df = pd.read_csv(csv_path, index_col=0, parse_dates=True)
@@ -96,23 +101,32 @@ def processing_dir(dir_path):
         alist.append(alert_level)
         clist.append(c_message)
 
-        c_message, alert_level, nrows = cu.check_nrows(df)
-        alist.append(alert_level)
-        clist.append(c_message)
-
         c_message, alert_level, pct_nan = check_nan(df, 0.4)
         alist.append(alert_level)
         clist.append(c_message)
-        alert = np.max(alist)
-        if alert != 3:
-            freq = cu.infer_freq(df)
 
+        if np.max(alist) != 3:
             c_message, alert_level, consecutive_nans = cons_nan_df(df, 1000)
             alist.append(alert_level)
             clist.append(c_message)
             logger.info('Consecutive NaN values:{} for {}'.
                         format(consecutive_nans, element))
+        # Removing rows from a DataFrame which all values are NaN's 
+        df = cu.clean_rows_df(df)
+        c_message, alert_level, nrows = cu.check_nrows(df)
+        alist.append(alert_level)
+        clist.append(c_message)
 
+        c_message, alert_level, long_rep, long_elem = cu.check_mccv(df, 10)
+        alist.append(alert_level)
+        clist.append(c_message)
+
+        alert = np.max(alist)
+        print alist
+        if alert != 3:
+            freq = cu.infer_freq(df)
+            if freq == pd.Timedelta('1 days'):
+                freq = 'B'
             c_message, alert_level, ts_fill_rate = cu.check_fill_rate(df, freq)
             alist.append(alert_level)
             clist.append(c_message)
@@ -120,8 +134,8 @@ def processing_dir(dir_path):
             c_message, alert_level, gaps_list, ngaps = cu.check_gaps(df, freq)
             alist.append(alert_level)
             clist.append(c_message)
-
         alert_level = np.max(alist)
+
         # control message
         if alert_level > 0:
             c_message = ', '.join([clist[i] for i, j in enumerate(clist) if j != 'OK'])
@@ -134,19 +148,24 @@ def processing_dir(dir_path):
                     'is_empty': is_empty,
                     'pct_nan': pct_nan,
                     'ts_fill_rate': ts_fill_rate,
-                    'alert': alert_level,
-                    'consecutive_nans': consecutive_nans
+                    'alert': np.max(alist),
+                    'consecutive_nans': consecutive_nans,
+                    'longest_element': long_elem,
+                    'longest_repeat': long_rep,
+                    'c_message': c_message
                     }
-        if alert_level != 0:
+        print var_dict['alert']
+        #if alert_level != 0:
             # list_denied.append(element)
             # data_utils.write_dict_to_csv('Y.csv', var_dict, 'a')
-            list_dict.append(var_dict)
+        list_dict.append(var_dict)
     dfj = pd.DataFrame.from_dict(list_dict)
     dfj = reorder_df(dfj)
     return dfj
 
 
 def main(path):
+
     df = pd.DataFrame()
     for pdir in os.listdir(path):
         logger.info('Processing directory: {}'.format(pdir))
@@ -160,10 +179,10 @@ def main(path):
             #     logger.error('Cannot process Empty Directory: {}'.format(pdir))
             #     df = pd.DataFrame()
             #===================================================================
-    df.to_csv('Files_to_check.csv')
+        df.to_csv('Fs_18_06.csv')
 
 path = '18 06 Derived'
+main('test')
 #===============================================================================
-# main('test')
+# main(path)
 #===============================================================================
-main(path)
