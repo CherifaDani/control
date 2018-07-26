@@ -51,7 +51,8 @@ def reorder_df(df):
             'nrows', 'ncols', 'is_empty', 'freq',
             'pct_nan',
             'ts_fill_rate', 'consecutive_nans',
-            'longest_element', 'longest_repeat', 'c_message']
+            'longest_element', 'longest_repeat', 'c_message', 'ngaps']
+
     return df[cols]
 
 
@@ -85,15 +86,16 @@ def processing_dir(dir_path):
         alert_level = 0
         nrows = ''
         is_empty = False
-        consecutive_nans = ''
+        consecutive_nans = 0
         freq = ''
         long_rep = ''
         long_elem = ''
         c_message = ''
         pct_nan = 0.0
         ts_fill_rate = ''
-
+        ngaps = 0
         csv_path = join(dir_path, element)
+        print(element)
         df = pd.read_csv(csv_path, index_col=0, parse_dates=True)
 
         c_message, alert_level, is_empty = cu.check_isempty(df)
@@ -104,7 +106,7 @@ def processing_dir(dir_path):
         alist.append(alert_level)
         clist.append(c_message)
 
-        c_message, alert_level, pct_nan = check_nan(df, 0.4)
+        c_message, alert_level, nrows = cu.check_nrows(df)
         alist.append(alert_level)
         clist.append(c_message)
 
@@ -114,6 +116,11 @@ def processing_dir(dir_path):
             clist.append(c_message)
             logger.info('Consecutive NaN values:{} for {}'.
                         format(consecutive_nans, element))
+
+            c_message, alert_level, pct_nan = check_nan(df, 0.4)
+            alist.append(alert_level)
+            clist.append(c_message)
+
         # Removing rows from a DataFrame which all values are NaN's
         df = cu.clean_rows_df(df)
         c_message, alert_level, nrows = cu.check_nrows(df)
@@ -133,7 +140,7 @@ def processing_dir(dir_path):
             c_message, alert_level, ts_fill_rate = cu.check_fill_rate(df, freq)
             alist.append(alert_level)
             clist.append(c_message)
- 
+
             c_message, alert_level, gaps_list, ngaps = cu.check_gaps(df, freq)
             alist.append(alert_level)
             clist.append(c_message)
@@ -151,7 +158,8 @@ def processing_dir(dir_path):
                     'consecutive_nans': consecutive_nans,
                     'longest_element': long_elem,
                     'longest_repeat': long_rep,
-                    'c_message': c_message
+                    'c_message': c_message,
+                    'ngaps': ngaps
                     }
         print var_dict['alert']
         # control message
@@ -180,8 +188,10 @@ def main(path):
 
         df.to_csv('Dict_files.csv')
 
-path = '18 06 Derived'
+path = '1807 Derived'
 #main('test')
 #===============================================================================
 main(path)
 #===============================================================================
+# df = processing_dir('1807 Derived/I')
+# df.to_csv('Dict_files(III).csv')
