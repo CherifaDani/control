@@ -261,6 +261,8 @@ def check_mccv(df, max_ccv):
     alert_level = 0
     ncols = df.shape[1]
     i = 0
+    long_rep = 0
+    long_elem = ''
     while i < ncols:
         val_vec = df.iloc[:, i].values
         long_elem, long_rep = longest_repetition(val_vec)
