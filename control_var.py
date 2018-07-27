@@ -10,7 +10,7 @@ import logging
 from var_logger import setup_logging
 from os.path import basename
 import shutil
-
+from datetime import datetime
 # Launching logger
 setup_logging()
 logger = logging.getLogger(__name__)
@@ -51,7 +51,7 @@ def reorder_df(df):
             'nrows', 'ncols', 'is_empty', 'freq',
             'pct_nan',
             'ts_fill_rate', 'consecutive_nans',
-            'longest_element', 'longest_repeat', 'c_message', 'ngaps']
+            'longest_element', 'longest_repeat', 'c_message', 'ngaps', 'lag']
 
     return df[cols]
 
@@ -76,6 +76,29 @@ def cons_nan_df(df, thr):
     return c_message, alert_level, consecutive_nans
 
 
+def get_lag(df, freq, tdate=datetime.today()):
+    refdays__m = pd.Timedelta('31 days')
+    refdays__hebd = pd.Timedelta('7 days')
+    refdays__q = pd.Timedelta('92 days')
+    alert_level = 2
+    last_update = df.index[-1]
+    tdiff = tdate - last_update
+    lag = tdiff.days
+    if freq in ['B', 'D']:
+        lag = tdiff.days
+        return alert_level, lag
+    elif freq == 7 and tdiff < refdays__hebd:
+        lag = tdiff.days
+        return alert_level, lag
+    elif freq == 31 and tdiff < refdays__m:
+        lag = tdiff.days
+        return alert_level, lag
+    elif freq == 92 and tdiff < refdays__q:
+        lag = tdiff.days
+        return alert_level, lag
+
+
+
 def processing_dir(dir_path):
     # list_accepted = []
     list_dict = []
@@ -94,6 +117,8 @@ def processing_dir(dir_path):
         pct_nan = 0.0
         ts_fill_rate = ''
         ngaps = 0
+        tdate = pd.to_datetime('23/07/2018', dayfirst=True)
+        lag = 0
         csv_path = join(dir_path, element)
         print(element)
         df = pd.read_csv(csv_path, index_col=0, parse_dates=True)
@@ -137,6 +162,10 @@ def processing_dir(dir_path):
             freq = cu.infer_freq(df)
             if freq == pd.Timedelta('1 days'):
                 freq = 'B'
+            else:
+                freq = freq.days
+            # print(df)
+            alert_level, lag = get_lag(df, freq=freq, tdate=tdate)
             c_message, alert_level, ts_fill_rate = cu.check_fill_rate(df, freq)
             alist.append(alert_level)
             clist.append(c_message)
@@ -144,6 +173,7 @@ def processing_dir(dir_path):
             c_message, alert_level, gaps_list, ngaps = cu.check_gaps(df, freq)
             alist.append(alert_level)
             clist.append(c_message)
+
         alert_level = np.max(alist)
 
         var_dict = {'current_directory': basename(dir_path),
@@ -159,7 +189,8 @@ def processing_dir(dir_path):
                     'longest_element': long_elem,
                     'longest_repeat': long_rep,
                     'c_message': c_message,
-                    'ngaps': ngaps
+                    'ngaps': ngaps,
+                    'lag': lag
                     }
         print var_dict['alert']
         # control message
@@ -188,10 +219,33 @@ def main(path):
 
         df.to_csv('Dict_files.csv')
 
-path = '1807 Derived'
+# path = '1807 Derived'
 #main('test')
 #===============================================================================
-main(path)
+# main(path)
 #===============================================================================
 # df = processing_dir('1807 Derived/I')
 # df.to_csv('Dict_files(III).csv')
+# path = 'x.csv'
+
+path = 'Base'
+dfs = processing_dir(path)
+dfs.to_csv('Base_filtered.csv')
+
+
+# df = pd.read_csv(path, index_col=0, parse_dates=True)
+# df.index = pd.DatetimeIndex(df.index)
+# df.sort_index(ascending=True, inplace=True)
+# #
+# freq = cu.infer_freq(df)
+# # # print(freq)
+# # # print(type(freq))
+# # print(freq.days)
+# tdate = pd.to_datetime('23/07/2018', dayfirst=True)
+# # print(tdate)
+# tdate = pd.to_datetime('01/06/2018', dayfirst=True)
+#
+# i = get_lag(df, freq=freq.days, tdate=tdate)
+# print(i)
+# # d = pd.Timedelta(days=3)
+# # print d.days
