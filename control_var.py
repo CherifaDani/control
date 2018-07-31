@@ -87,16 +87,17 @@ def get_lag(df, freq, tdate=datetime.today()):
     if freq in ['B', 'D']:
         lag = tdiff.days
         return alert_level, lag
-    elif freq == 7 and tdiff < refdays__hebd:
+    elif freq == 'W' and tdiff < refdays__hebd:
         lag = tdiff.days
         return alert_level, lag
-    elif freq == 31 and tdiff < refdays__m:
+    elif freq == 'M' and tdiff < refdays__m:
         lag = tdiff.days
         return alert_level, lag
-    elif freq == 92 and tdiff < refdays__q:
+    elif freq == 'Q' and tdiff < refdays__q:
         lag = tdiff.days
         return alert_level, lag
-
+    else:
+        return alert_level, lag
 
 
 def processing_dir(dir_path):
@@ -117,7 +118,7 @@ def processing_dir(dir_path):
         pct_nan = 0.0
         ts_fill_rate = ''
         ngaps = 0
-        tdate = pd.to_datetime('23/07/2018', dayfirst=True)
+        tdate = pd.to_datetime('05/06/2018', dayfirst=True)
         lag = 0
         csv_path = join(dir_path, element)
         print(element)
@@ -162,9 +163,15 @@ def processing_dir(dir_path):
             freq = cu.infer_freq(df)
             if freq == pd.Timedelta('1 days'):
                 freq = 'B'
+            elif freq == pd.Timedelta('7 days'):
+                freq = 'W'
+            elif freq == pd.Timedelta('31 days'):
+                freq = 'M'
+            elif freq == pd.Timedelta('92 days'):
+                freq = 'Q'
             else:
                 freq = freq.days
-            # print(df)
+            print(freq)
             alert_level, lag = get_lag(df, freq=freq, tdate=tdate)
             c_message, alert_level, ts_fill_rate = cu.check_fill_rate(df, freq)
             alist.append(alert_level)
@@ -228,9 +235,9 @@ def main(path):
 # df.to_csv('Dict_files(III).csv')
 # path = 'x.csv'
 
-path = 'Base'
+path = 'Base_v2'
 dfs = processing_dir(path)
-dfs.to_csv('Base_filtered.csv')
+dfs.to_csv('Base_v2_filtered.csv')
 
 
 # df = pd.read_csv(path, index_col=0, parse_dates=True)
