@@ -178,7 +178,8 @@ def discretize(xcol, nb_bucket, bins=None):
                 number of modalities
 
     bins : {ndarray type}, optional, default None
-           if you have already calculate the bins for xcol
+           if you have already calculate the bins lates
+           for xcol
 
     Return
     ------

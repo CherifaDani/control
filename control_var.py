@@ -118,7 +118,7 @@ def processing_dir(dir_path):
         pct_nan = 0.0
         ts_fill_rate = ''
         ngaps = 0
-        tdate = pd.to_datetime('05/06/2018', dayfirst=True)
+        # tdate = pd.to_datetime('05/06/2018', dayfirst=True)
         lag = 0
         csv_path = join(dir_path, element)
         print(element)
@@ -156,7 +156,7 @@ def processing_dir(dir_path):
         c_message, alert_level, long_rep, long_elem = cu.check_mccv(df, 10)
         alist.append(alert_level)
         clist.append(c_message)
-
+        print alert_level
         alert = np.max(alist)
         print alist
         if alert != 3:
@@ -172,7 +172,7 @@ def processing_dir(dir_path):
             else:
                 freq = freq.days
             print(freq)
-            alert_level, lag = get_lag(df, freq=freq, tdate=tdate)
+            alert_level, lag = get_lag(df, freq=freq)
             c_message, alert_level, ts_fill_rate = cu.check_fill_rate(df, freq)
             alist.append(alert_level)
             clist.append(c_message)
@@ -235,9 +235,10 @@ def main(path):
 # df.to_csv('Dict_files(III).csv')
 # path = 'x.csv'
 
-path = 'Base_v2'
+path = '/home/cluster/MISSIONS/sesamm/test'
+
 dfs = processing_dir(path)
-dfs.to_csv('Base_v2_filtered.csv')
+dfs.to_csv('sesamm.csv')
 
 
 # df = pd.read_csv(path, index_col=0, parse_dates=True)
