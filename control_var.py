@@ -51,7 +51,9 @@ def reorder_df(df):
             'nrows', 'ncols', 'is_empty', 'freq',
             'pct_nan',
             'ts_fill_rate', 'consecutive_nans',
-            'longest_element', 'longest_repeat', 'c_message', 'ngaps', 'lag']
+            'longest_element', 'longest_repeat', 'c_message', 'ngaps',
+            'lag', 'start_date_mccv', 'end_date_mccv',
+            'last_date']
 
     return df[cols]
 
@@ -77,6 +79,8 @@ def cons_nan_df(df, thr):
 
 
 def get_lag(df, freq, tdate=datetime.today()):
+    tdate = pd.to_datetime('24/10/2018', dayfirst=True)
+
     refdays__m = pd.Timedelta('31 days')
     refdays__hebd = pd.Timedelta('7 days')
     refdays__q = pd.Timedelta('92 days')
@@ -104,6 +108,9 @@ def processing_dir(dir_path):
     # list_accepted = []
     list_dict = []
     element = ''
+    last_date_mccv = None
+    first_date_mccv = None
+
     for element in os.listdir(dir_path):
         alist = []
         clist = []
@@ -118,12 +125,12 @@ def processing_dir(dir_path):
         pct_nan = 0.0
         ts_fill_rate = ''
         ngaps = 0
+        last_date = None
         # tdate = pd.to_datetime('05/06/2018', dayfirst=True)
         lag = 0
         csv_path = join(dir_path, element)
         print(element)
         df = pd.read_csv(csv_path, index_col=0, parse_dates=True)
-
         c_message, alert_level, is_empty = cu.check_isempty(df)
         alist.append(alert_level)
         clist.append(c_message)
@@ -136,16 +143,16 @@ def processing_dir(dir_path):
         alist.append(alert_level)
         clist.append(c_message)
 
-        if np.max(alist) != 3:
-            c_message, alert_level, consecutive_nans = cons_nan_df(df, 1000)
-            alist.append(alert_level)
-            clist.append(c_message)
-            logger.info('Consecutive NaN values:{} for {}'.
-                        format(consecutive_nans, element))
-
-            c_message, alert_level, pct_nan = check_nan(df, 0.4)
-            alist.append(alert_level)
-            clist.append(c_message)
+        # if np.max(alist) != 3:
+        #     c_message, alert_level, consecutive_nans = cons_nan_df(df, 1000)
+        #     alist.append(alert_level)
+        #     clist.append(c_message)
+        #     logger.info('Consecutive NaN values:{} for {}'.
+        #                 format(consecutive_nans, element))
+        #
+        #     c_message, alert_level, pct_nan = check_nan(df, 0.4)
+        #     alist.append(alert_level)
+        #     clist.append(c_message)
 
         # Removing rows from a DataFrame which all values are NaN's
         df = cu.clean_rows_df(df)
@@ -153,13 +160,15 @@ def processing_dir(dir_path):
         alist.append(alert_level)
         clist.append(c_message)
 
-        c_message, alert_level, long_rep, long_elem = cu.check_mccv(df, 10)
-        alist.append(alert_level)
-        clist.append(c_message)
-        print alert_level
         alert = np.max(alist)
         print alist
         if alert != 3:
+            c_message, alert_level, long_rep, long_elem, start_date_mccv, end_date_mccv = cu.check_mccv(df, 10)
+            alist.append(alert_level)
+            clist.append(c_message)
+            print alert_level
+            last_date = df.index[-1]
+
             freq = cu.infer_freq(df)
             if freq == pd.Timedelta('1 days'):
                 freq = 'B'
@@ -197,7 +206,10 @@ def processing_dir(dir_path):
                     'longest_repeat': long_rep,
                     'c_message': c_message,
                     'ngaps': ngaps,
-                    'lag': lag
+                    'lag': lag,
+                    'last_date': last_date,
+                    'start_date_mccv': start_date_mccv,
+                    'end_date_mccv': end_date_mccv
                     }
         print var_dict['alert']
         # control message
@@ -213,18 +225,34 @@ def processing_dir(dir_path):
     return dff
 
 
-def main(path):
+# def main(path):
+#
+#     df = pd.DataFrame()
+#     for pdir in os.listdir(path):
+#         logger.info('Processing directory: {}'.format(pdir))
+#         c_dir = os.path.join(path, pdir)
+#         if os.path.isdir(c_dir):
+#             if os.listdir(c_dir) != []:
+#                 dfi = processing_dir(c_dir)
+#                 df = df.append(dfi)
+#
+#         df.to_csv('Dict_files.csv')
+def main(dir_path1, csv_name, diff_dir,  dirs=None):
+    if not os.path.exists(diff_dir):
+        os.makedirs(diff_dir)
 
-    df = pd.DataFrame()
-    for pdir in os.listdir(path):
-        logger.info('Processing directory: {}'.format(pdir))
-        c_dir = os.path.join(path, pdir)
-        if os.path.isdir(c_dir):
-            if os.listdir(c_dir) != []:
-                dfi = processing_dir(c_dir)
-                df = df.append(dfi)
+    df_global = pd.DataFrame()
+    for element in dirs:
+        rep1 = os.path.join(dir_path1, element)
 
-        df.to_csv('Dict_files.csv')
+        if len(os.listdir(rep1)) != 0:
+            diff_dir_rep = os.path.join(diff_dir, rep1)
+            if not os.path.exists(diff_dir_rep):
+                os.makedirs(diff_dir_rep)
+            dfi = processing_dir(rep1)
+            df_global = df_global.append(dfi)
+        df_global.to_csv(join(diff_dir, csv_name), index=False)
+
 
 # path = '1807 Derived'
 #main('test')
@@ -234,11 +262,19 @@ def main(path):
 # df = processing_dir('1807 Derived/I')
 # df.to_csv('Dict_files(III).csv')
 # path = 'x.csv'
+dirs = ['2 Data/2 Calculs/18 09 Derived/I',
+        '2 Data/2 Calculs/18 09 Derived/AuxVariables',
+        '2 Data/2 Calculs/18 09 Derived/Y',
+        '2 Data/2 Calculs/18 09 Derived/X',
+        '2 Data/1 Received/Market data/Base',
+        ]
 
-path = '/home/cluster/MISSIONS/sesamm/test'
-
-dfs = processing_dir(path)
-dfs.to_csv('sesamm.csv')
+# path = '/home/cluster/MISSIONS/sesamm/test'
+dir_path1 = '/media/HDD/MISSIONS_JUPYTER/compare_dirs_1v/Data_1V_Backtest_Analysis_241018'
+# dirs = ['2 Data/1 Received/Market data/test']
+print main(dir_path1, csv_name='control_1v-24.10.csv', diff_dir='1v', dirs=dirs)
+# dfs = processing_dir(dir_path1)
+# dfs.to_csv('sesamm.csv')
 
 
 # df = pd.read_csv(path, index_col=0, parse_dates=True)
