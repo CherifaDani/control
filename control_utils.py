@@ -157,14 +157,14 @@ def check_min_max(df, val_min, val_max):
     return c_message, alert_level
 
 
-def longest_repetition(iterable):
+def longest_repetition(df):
     """
     Function returning .
     .
     Parameters
     ----------
-    iterable : {Pandas series type}
-                  Input series
+    df : {Pandas Dataframe type}
+                  Input DF
 
     Return
     ------
@@ -176,18 +176,28 @@ def longest_repetition(iterable):
     longest_repeats : {Int type}
                         The number of times the item is consecutively repeated
     """
+    end_date = ''
     longest_element = current_element = None
     longest_repeats = current_repeats = 0
-    for element in iterable:
+    for elementx in df.itertuples():
+        element = elementx[1]
         if current_element == element:
             current_repeats += 1
         else:
             current_element = element
             current_repeats = 1
+
         if current_repeats > longest_repeats:
             longest_repeats = current_repeats
             longest_element = current_element
-    return longest_element, longest_repeats
+            end_date = elementx[0]
+    df_reset = df.reset_index()
+
+    idx_end = df_reset.index[df_reset[df_reset.columns[0]] == end_date]
+    idx_start = idx_end - longest_repeats + 1
+    row = df_reset.iloc[idx_start]
+    start_date = row.iloc[0, 0]
+    return longest_element, longest_repeats, start_date, end_date
 
 
 # Function checking the maximum absolute change of the Time Series
@@ -221,7 +231,6 @@ def check_mac(df, val_mac):
     i = 1  # i = 0 if index == True else i = 1
     while i < ncols:
         val_vec = df.iloc[:, i].values
-        print val_vec
 
         if val_mac != '':
             # Relative Variation (note : take into account the frequency !)
@@ -259,18 +268,16 @@ def check_mccv(df, max_ccv):
     """
     c_message = 'OK'
     alert_level = 0
-    ncols = df.shape[1]
     i = 0
     long_rep = 0
     long_elem = ''
-    while i < ncols:
-        val_vec = df.iloc[:, i].values
-        long_elem, long_rep = longest_repetition(val_vec)
-        if long_rep > max_ccv:
-            c_message = 'max ccv overflow'
-            alert_level = 2
-        i += 1
-    return c_message, alert_level, long_rep, long_elem
+
+    long_elem, long_rep, start_date, end_date = longest_repetition(df)
+
+    if long_rep > max_ccv:
+        c_message = 'max ccv overflow'
+        alert_level = 2
+    return c_message, alert_level, long_rep, long_elem, start_date, end_date
 
 
 def infer_freq(df):
