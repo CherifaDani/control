@@ -61,6 +61,7 @@ def reorder_df(df):
 def cons_nan_df(df, thr):
     """
     Consecutive NaN values
+
     """
     alert_level = 0
     c_message = 'OK'
