@@ -254,14 +254,6 @@ def main(dir_path1, csv_name, diff_dir,  dirs=None):
         df_global.to_csv(join(diff_dir, csv_name), index=False)
 
 
-# path = '1807 Derived'
-#main('test')
-#===============================================================================
-# main(path)
-#===============================================================================
-# df = processing_dir('1807 Derived/I')
-# df.to_csv('Dict_files(III).csv')
-# path = 'x.csv'
 dirs = ['2 Data/2 Calculs/18 09 Derived/I',
         '2 Data/2 Calculs/18 09 Derived/AuxVariables',
         '2 Data/2 Calculs/18 09 Derived/Y',
@@ -269,27 +261,6 @@ dirs = ['2 Data/2 Calculs/18 09 Derived/I',
         '2 Data/1 Received/Market data/Base',
         ]
 
-# path = '/home/cluster/MISSIONS/sesamm/test'
-dir_path1 = '/media/HDD/MISSIONS_JUPYTER/compare_dirs_1v/Data_1V_Backtest_Analysis_241018'
-# dirs = ['2 Data/1 Received/Market data/test']
-print main(dir_path1, csv_name='control_1v-24.10.csv', diff_dir='1v', dirs=dirs)
-# dfs = processing_dir(dir_path1)
-# dfs.to_csv('sesamm.csv')
+dir_path = '/media/HDD/MISSIONS_JUPYTER/compare_dirs_1v/Data_1V_Backtest_Analysis_241018'
+print main(dir_path, csv_name='control_1v-24.10.csv', diff_dir='1v', dirs=dirs)
 
-
-# df = pd.read_csv(path, index_col=0, parse_dates=True)
-# df.index = pd.DatetimeIndex(df.index)
-# df.sort_index(ascending=True, inplace=True)
-# #
-# freq = cu.infer_freq(df)
-# # # print(freq)
-# # # print(type(freq))
-# # print(freq.days)
-# tdate = pd.to_datetime('23/07/2018', dayfirst=True)
-# # print(tdate)
-# tdate = pd.to_datetime('01/06/2018', dayfirst=True)
-#
-# i = get_lag(df, freq=freq.days, tdate=tdate)
-# print(i)
-# # d = pd.Timedelta(days=3)
-# # print d.days
